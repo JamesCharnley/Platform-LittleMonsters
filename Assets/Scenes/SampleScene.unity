@@ -171,9 +171,9 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 1
-  m_LinearDrag: 0.2
+  m_LinearDrag: 0
   m_AngularDrag: 0.05
-  m_GravityScale: 1
+  m_GravityScale: 2
   m_Material: {fileID: 0}
   m_Interpolate: 0
   m_SleepingMode: 1
@@ -201,8 +201,8 @@ MonoBehaviour:
   - button: {fileID: 484011133}
     isPressed: 0
   m_moveSpeed: 750
-  m_airControl: 200
-  m_jumpForce: 15
+  m_airControl: 100
+  m_jumpForce: 25
   groundedDistance: 2
   layerMask:
     serializedVersion: 2

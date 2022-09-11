@@ -5,6 +5,8 @@ using UnityEngine.SceneManagement;
 
 public class SceneChanger : MonoBehaviour
 {
+    [SerializeField]
+    int scene;
     private void OnTriggerEnter2D(Collider2D collision)
     {
         Debug.Log("Trigger");
@@ -12,7 +14,7 @@ public class SceneChanger : MonoBehaviour
         {
             if(collision.transform.GetComponent<Player>() != null)
             {
-                SceneManager.LoadScene("SceneTwo");
+                SceneManager.LoadScene(scene);
             }
         }
     }

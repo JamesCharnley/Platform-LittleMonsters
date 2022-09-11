@@ -19,12 +19,21 @@ public class Player : MonoBehaviour
     [SerializeField]
     float m_moveSpeed = 10;
     [SerializeField]
+    float maxVelocity;
+    [SerializeField]
     float m_airControl = 10;
 
     [SerializeField]
     float m_jumpForce = 10;
+    [SerializeField]
+    float m_secondJumpForce = 10;
+
+    [SerializeField]
+    float voltForce = 10;
+    bool isVolting = false;
 
     bool isJumping = false;
+    bool maxJumpsReached = false;
 
     Vector3 prevPos;
     Camera cam;
@@ -33,26 +42,41 @@ public class Player : MonoBehaviour
     {
         cam = Camera.main;
         rb = GetComponent<Rigidbody2D>();
+        currentVoltCutoff = voltCutoffMin;
     }
 
+
+    [SerializeField]
+    float voltEndVelocity = 1;
+    [SerializeField] float voltCutoffMin = 1;
+    [SerializeField] float voltCutoffMax = 1;
+    [SerializeField] float voltCutoffChangeSpeed = 1;
+    float currentVoltCutoff = 0;
+
+    [SerializeField]
+    LayerMask voltDamageLayer;
+
+    float horizontalAxis = 0;
     // Update is called once per frame
     void Update()
     {
+        
         //Move(Input.GetAxisRaw("Horizontal"));
         if(Input.GetAxisRaw("Horizontal") != 0)
         {
             horizontalAxis = Input.GetAxisRaw("Horizontal");
         }
+        else
+        {
+            horizontalAxis = InputManager.instance.horizontalAxis;
+        }
         Move(horizontalAxis);
 
-        if (Input.GetKeyDown(KeyCode.Space) || buttons[3].isPressed)
+        if (Input.GetKeyDown(KeyCode.W) || buttons[3].isPressed)
         {
             buttons[3].isPressed = false;
-            if(IsGrounded())
-            {
-                Jump();
-            }
-            
+            //Jump();
+
         }
 
         if(isJumping)
@@ -62,36 +86,102 @@ public class Player : MonoBehaviour
                 if(IsGrounded())
                 {
                     isJumping = false;
+                    maxJumpsReached = false;
                 }
+            }
+        }
+
+        if(buttons[2].isPressed || Input.GetKeyDown(KeyCode.Space))
+        {
+            buttons[2].isPressed = false;
+            //Action(rb.velocity);
+        }
+
+        if(isVolting)
+        {
+            if(rb.velocity.magnitude <= voltEndVelocity)
+            {
+                isVolting = false;
+                currentVoltCutoff = voltCutoffMin;
+            }
+            else
+            {
+                if(IsGrounded())
+                {
+                    if (currentVoltCutoff < voltCutoffMax)
+                    {
+                        currentVoltCutoff += voltCutoffChangeSpeed * Time.deltaTime;
+                    }
+
+                    Vector2 newVelocity = new Vector2(rb.velocity.normalized.x * rb.velocity.magnitude - currentVoltCutoff * Time.deltaTime, rb.velocity.y);
+                    rb.velocity = newVelocity;
+                }
+                RaycastHit2D hit = Physics2D.CircleCast(rb.position, 1, rb.velocity.normalized, 1, voltDamageLayer);
+                if(hit)
+                {
+                    Destroy(hit.transform.gameObject);
+                }
+                
             }
         }
 
         prevPos = transform.position;
 
-        InputCheck();
     }
 
     private void Move(float _axis)
     {
-        if(IsGrounded())
+        if(!isVolting && IsGrounded())
         {
-            rb.AddForce(transform.right * _axis * m_moveSpeed * Time.deltaTime, ForceMode2D.Force);
-        }
-        else
-        {
-            rb.AddForce(transform.right * _axis * m_airControl * Time.deltaTime, ForceMode2D.Force);
-        }
+            if (rb.velocity.magnitude < maxVelocity)
+            {
+                if (IsGrounded())
+                {
+                    rb.AddForce(transform.right * _axis * m_moveSpeed * Time.deltaTime, ForceMode2D.Force);
+                }
+                else
+                {
+                    //rb.AddForce(transform.right * _axis * m_airControl * Time.deltaTime, ForceMode2D.Force);
+                }
+            }
 
-        if(_axis == 0 && IsGrounded() && !isJumping)
-        {
-            rb.velocity = Vector3.zero;
+
+            if (_axis == 0 && IsGrounded() && !isJumping)
+            {
+                rb.velocity = Vector3.zero;
+            }
         }
+        
     }
 
-    private void Jump()
+    public void Jump()
     {
-        isJumping = true;
-        rb.AddForce(transform.up * m_jumpForce, ForceMode2D.Impulse);
+        if(!maxJumpsReached)
+        {
+            float jumpForce = m_jumpForce;
+            if (!IsGrounded() && isJumping)
+            {
+                maxJumpsReached = true;
+                jumpForce = m_secondJumpForce;
+            }
+            isJumping = true;
+            if(IsGrounded())
+            {
+                rb.velocity = rb.velocity.normalized * (rb.velocity.magnitude / 1.5f);
+            }
+            
+            rb.AddForce(transform.up * jumpForce, ForceMode2D.Impulse);
+        }
+        
+    }
+
+    public void Action()
+    {
+        if(!isVolting && horizontalAxis != 0 && IsGrounded())
+        {
+            isVolting = true;
+            rb.AddForce(rb.velocity.normalized * voltForce, ForceMode2D.Impulse);
+        }
     }
 
     [SerializeField]
@@ -113,74 +203,6 @@ public class Player : MonoBehaviour
         }
     }
 
-    float horizontalAxis = 0;
-    void InputCheck()
-    {
-        
-        //Vector3 buttonTop = buttons[0].transform.position + transform.up * 0.5f * buttons[0].transform.lossyScale.y;
-        //Debug.DrawLine(buttonTop + transform.right * 5, buttonTop + -transform.right * 5, Color.green, 0);
-        foreach (Touch touch in Input.touches)
-        {
-            
-            //Vector3 buttonTop = buttons[0].transform.position + transform.up * 0.5f * buttons[0].transform.lossyScale.y;
-            //Debug.DrawLine(buttonTop + transform.right, buttonTop + -transform.right, Color.green, 0);
-            
-            int count = 0;
-            foreach(ButtonStates _button in buttons)
-            {
-                Vector3 buttonTop = _button.button.position + transform.up * 0.5f * _button.button.lossyScale.y;
-                Vector3 buttonBottom = _button.button.position + -transform.up * 0.5f * _button.button.lossyScale.y;
-                Vector3 buttonLeft = _button.button.position + -transform.right * 0.5f * _button.button.lossyScale.x;
-                Vector3 buttonRight = _button.button.position + transform.right * 0.5f * _button.button.lossyScale.x;
-
-                
-                if (touch.position.x > cam.WorldToScreenPoint(buttonLeft).x)
-                {
-                    if(touch.position.x < cam.WorldToScreenPoint(buttonRight).x)
-                    {
-                        if(touch.position.y > cam.WorldToScreenPoint(buttonBottom).y)
-                        {
-                            if (touch.position.y < cam.WorldToScreenPoint(buttonTop).y)
-                            {
-                                if(count == 0 || count == 1)
-                                {
-                                    if(touch.phase == TouchPhase.Began)
-                                    {
-                                        buttons[count].isPressed = true;
-                                        Debug.Log("Button " + count.ToString() + " Pressed");
-                                    }
-                                    else if(touch.phase == TouchPhase.Ended)
-                                    {
-                                        buttons[count].isPressed = false;
-                                        Debug.Log("Button " + count.ToString() + " Released");
-                                    }
-                                }
-                                else if(count == 2 || count == 3)
-                                {
-                                    if(touch.phase == TouchPhase.Ended)
-                                    {
-                                        buttons[count].isPressed = true;
-                                    }
-                                }
-                                
-                            }
-                        }
-                    }
-                }
-                count++;
-            }
-        }
-
-        horizontalAxis = 0;
-        if(buttons[0].isPressed)
-        {
-            horizontalAxis -= 1;
-            //Debug.Log("Left button pressed");
-        }
-        if(buttons[1].isPressed)
-        {
-            horizontalAxis += 1;
-            //Debug.Log("Right button pressed");
-        }
-    }
+    
+    
 }

@@ -9,14 +9,14 @@ public class GameManager : MonoBehaviour, IUnityAdsListener
 
     string gameID = "4879589";
 
-
+    int scenecount = 0;
     // Start is called before the first frame update
     void Start()
     {
         DontDestroyOnLoad(this);
         SceneManager.sceneLoaded += NewScene;
         Advertisement.AddListener(this);
-        Advertisement.Initialize(gameID, true);
+        Advertisement.Initialize(gameID, false);
     }
 
     // Update is called once per frame
@@ -27,10 +27,12 @@ public class GameManager : MonoBehaviour, IUnityAdsListener
 
     void NewScene(Scene _scene, LoadSceneMode _mode)
     {
-        if(_scene.buildIndex > 0)
+        scenecount++;
+        if (scenecount > 0)
         {
             ShowAd();
         }
+        
         
     }
 

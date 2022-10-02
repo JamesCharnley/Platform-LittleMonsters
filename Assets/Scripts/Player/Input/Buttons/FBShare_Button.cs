@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class FBShare_Button : Button_Touch
+public class FBShare_Button : MonoBehaviour
 {
-    protected override void StartAction()
+    public void OnClick()
     {
         FBManager fb = FindObjectOfType<FBManager>();
         if (fb != null)

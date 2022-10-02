@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class StartGame_Button : Button_Touch
+public class StartGame_Button : MonoBehaviour
 {
-    protected override void StartAction()
+    public void OnClick()
     {
         SceneManager.LoadScene(1);
     }

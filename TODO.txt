@@ -1,0 +1,12 @@
+todo
+
+- jump milestone
+- fall death //
+- make control but bigger in all scenes //
+- stop ads when purchased //
+- remove buy ads button when ads removed //
+- make 3rd level //
+- game icon
+- backwards attack sends player flying //
+- leader board //
+

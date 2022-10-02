@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 public class InputManager : MonoBehaviour
 {
     static public InputManager instance;
@@ -19,7 +19,16 @@ public class InputManager : MonoBehaviour
 
     private void Start()
     {
-        instance = this;
+        if(instance == null)
+        {
+            SceneManager.sceneLoaded += GetButtons;
+            instance = this;
+            buttons = FindObjectsOfType<Button_Touch>();
+        }
+        
+    }
+    public void GetButtons(Scene _scene, LoadSceneMode _mode)
+    {
         buttons = FindObjectsOfType<Button_Touch>();
     }
     private void Update()

@@ -37,12 +37,22 @@ public class Player : MonoBehaviour
 
     Vector3 prevPos;
     Camera cam;
+
+    [SerializeField] Animator anim;
+
+    [SerializeField] AudioClip jumpSound1;
+    [SerializeField] AudioClip jumpSound2;
+    [SerializeField] AudioClip killSound;
+    [SerializeField] AudioClip voltSound;
+
+    AudioSource audioSource;
     // Start is called before the first frame update
     void Start()
     {
         cam = Camera.main;
         rb = GetComponent<Rigidbody2D>();
         currentVoltCutoff = voltCutoffMin;
+        audioSource = GetComponent<AudioSource>();
     }
 
 
@@ -75,7 +85,7 @@ public class Player : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.W) || buttons[3].isPressed)
         {
             buttons[3].isPressed = false;
-            //Jump();
+            Jump();
 
         }
 
@@ -94,7 +104,7 @@ public class Player : MonoBehaviour
         if(buttons[2].isPressed || Input.GetKeyDown(KeyCode.Space))
         {
             buttons[2].isPressed = false;
-            //Action(rb.velocity);
+            Action();
         }
 
         if(isVolting)
@@ -112,8 +122,16 @@ public class Player : MonoBehaviour
                     {
                         currentVoltCutoff += voltCutoffChangeSpeed * Time.deltaTime;
                     }
-
-                    Vector2 newVelocity = new Vector2(rb.velocity.normalized.x * rb.velocity.magnitude - currentVoltCutoff * Time.deltaTime, rb.velocity.y);
+                    float cutoffDir = 0;
+                    if(rb.velocity.normalized.x < 0)
+                    {
+                        cutoffDir = -1;
+                    }
+                    else
+                    {
+                        cutoffDir = 1;
+                    }
+                    Vector2 newVelocity = new Vector2(rb.velocity.normalized.x * rb.velocity.magnitude - (currentVoltCutoff * cutoffDir) * Time.deltaTime, rb.velocity.y);
                     rb.velocity = newVelocity;
                 }
                 RaycastHit2D hit = Physics2D.CircleCast(rb.position, 1, rb.velocity.normalized, 1, voltDamageLayer);
@@ -126,13 +144,21 @@ public class Player : MonoBehaviour
         }
 
         prevPos = transform.position;
-
+        anim.SetBool("IsGrounded", IsGrounded());
     }
 
     private void Move(float _axis)
     {
         if(!isVolting && IsGrounded())
         {
+            if(_axis != 0)
+            {
+                anim.SetBool("IsIdle", false);
+            }
+            else
+            {
+                anim.SetBool("IsIdle", true);
+            }
             if (rb.velocity.magnitude < maxVelocity)
             {
                 if (IsGrounded())
@@ -151,6 +177,27 @@ public class Player : MonoBehaviour
                 rb.velocity = Vector3.zero;
             }
         }
+        else if(isVolting && IsGrounded() && !isJumping)
+        {
+            if(_axis != 0)
+            {
+                float dir = rb.velocity.normalized.x;
+                if(dir < 0)
+                {
+                    dir = -1;
+                }
+                else if(dir > 0)
+                {
+                    dir = 1;
+                }
+                if(dir != _axis)
+                {
+                    isVolting = false;
+                    currentVoltCutoff = voltCutoffMin;
+                    rb.velocity = Vector3.zero;
+                }
+            }
+        }
         
     }
 
@@ -161,16 +208,23 @@ public class Player : MonoBehaviour
             float jumpForce = m_jumpForce;
             if (!IsGrounded() && isJumping)
             {
+                audioSource.clip = jumpSound2;
+                audioSource.Play();
                 maxJumpsReached = true;
                 jumpForce = m_secondJumpForce;
             }
             isJumping = true;
             if(IsGrounded())
             {
+                audioSource.clip = jumpSound1;
+                audioSource.Play();
+                anim.SetTrigger("Jump");
                 rb.velocity = rb.velocity.normalized * (rb.velocity.magnitude / 1.5f);
             }
-            
+            isVolting = false;
+            currentVoltCutoff = voltCutoffMin;
             rb.AddForce(transform.up * jumpForce, ForceMode2D.Impulse);
+            GameManager.instance.UpdateJumpMilestone();
         }
         
     }
@@ -179,6 +233,9 @@ public class Player : MonoBehaviour
     {
         if(!isVolting && horizontalAxis != 0 && IsGrounded())
         {
+            audioSource.clip = voltSound;
+            audioSource.Play();
+            anim.SetTrigger("Attack");
             isVolting = true;
             rb.AddForce(rb.velocity.normalized * voltForce, ForceMode2D.Impulse);
         }
@@ -203,6 +260,33 @@ public class Player : MonoBehaviour
         }
     }
 
-    
-    
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if(collision.transform.tag == "Point")
+        {
+            GameManager.instance.AddPoints(1);
+            Destroy(collision.gameObject);
+        }
+        
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        Enemy enemy = collision.transform.GetComponent<Enemy>();
+        if (enemy != null)
+        {
+            if (isVolting)
+            {
+                audioSource.clip = killSound;
+                audioSource.Play();
+                enemy.Die();
+            }
+            else
+            {
+                // kill player
+                GameManager.instance.PlayerDied();
+            }
+        }
+    }
+
 }

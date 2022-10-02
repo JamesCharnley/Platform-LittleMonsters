@@ -5,8 +5,15 @@ using UnityEngine.SceneManagement;
 
 public class SceneChanger : MonoBehaviour
 {
+    AudioSource audioSource;
+    [SerializeField] AudioClip winSound;
     [SerializeField]
     int scene;
+
+    private void Start()
+    {
+        audioSource = GetComponent<AudioSource>();
+    }
     private void OnTriggerEnter2D(Collider2D collision)
     {
         Debug.Log("Trigger");
@@ -14,7 +21,9 @@ public class SceneChanger : MonoBehaviour
         {
             if(collision.transform.GetComponent<Player>() != null)
             {
-                SceneManager.LoadScene(scene);
+                audioSource.clip = winSound;
+                audioSource.Play();
+                GameManager.instance.EndOfLevel();
             }
         }
     }
